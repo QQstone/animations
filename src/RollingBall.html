@@ -1,0 +1,115 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Seed</title>
+    </head>
+    <body style="background: #000;">
+        <button onclick="rolling()">Rolling</button>
+        <canvas id="wordCloud" width="800" height="800" >
+            <ul>
+                <li>H</li><li>H</li><li>0</li>
+                <li>i</li><li>H</li><li>0</li>
+                <li>i</li><li>0</li><li>0</li>
+                <li>i</li><li>0</li><li>0</li>
+                <li>0</li><li>0</li><li>0</li>
+                <li>0</li><li>0</li><li>0</li>
+            </ul>
+        </canvas>
+        <script type="text/javascript">
+            // init webgl
+            const canvas = document.getElementById('wordCloud')
+            const ctx = canvas.getContext('2d')
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const vpx = canvas.width/2 // 圆心偏移(0,0) 使x，y不为负数
+            const vpy = canvas.height/2
+            const R = 300
+            // z: [-300 300]
+            f = 400 
+            opacity_min = 0.3
+            const atoms=[]
+            // solid ball 经纬
+            // 粒子
+            const atom = function(x,y,z,r){
+                this.x = x;
+                this.y = y;
+                this.z = z;
+                this.r = r;
+            }
+            atom.prototype.paint=function(){
+                ctx.save() //?
+                ctx.beginPath()
+                const r_projection = this.r*f/(f-this.z)
+                ctx.arc(vpx+this.x,vpy+this.y,this.r,0,Math.PI*2,true)
+                ctx.fillStyle=`rgba(255,255,255,${opacity_min + (R+this.z)/2/R})`
+                ctx.fill()
+                ctx.restore()
+            }
+            const N = 10
+            for(let k=-N; k<=N; k++){ // 2N+1个纬度
+                const R_latitude = Math.pow(R*R - Math.pow(R*k/N,2),0.5)
+                for(let i = 0; i<2*N; i++){ // 2N条经线
+                    const x = R_latitude*Math.cos(i*Math.PI/N)
+                    const y = R_latitude*Math.sin(i*Math.PI/N)
+                    const z = k/N*R
+                    const a = new atom(x,y,z,3)
+                    a.paint()
+                    atoms.push(a)
+                }
+            }
+            // fill with words
+
+            // rolling
+            let angleX = angleY = 0
+            function rotateX(angle){
+                atoms.forEach(atom=>{
+                    const y = atom.y*Math.cos(angle) - atom.z*Math.sin(angle) 
+                    const z = atom.y*Math.sin(angle) + atom.z*Math.cos(angle)
+                    atom.y = y
+                    atom.z = z 
+                })
+            }
+            function rotateY(angle){
+                atoms.forEach(atom=>{
+                    const z = atom.z*Math.cos(angle) - atom.x*Math.sin(angle) 
+                    const x = atom.z*Math.sin(angle) + atom.x*Math.cos(angle)
+                    atom.z = z
+                    atom.x = x 
+                })
+            }
+            function rolling(){
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if(Math.random()>0.5){
+                    rotateX(Math.PI/36)
+                }else{
+                    rotateY(Math.PI/36)
+                }
+                atoms.forEach(atom=>{
+                    atom.paint()
+                })
+            }
+            canvas.addEventListener('mousemove',function(e){
+                var x = e.clientX - vpx
+                var y = e.clientY - vpy
+                angleX = -x*0.0001
+                angleY = -y*0.0001
+            })
+            let start
+            function animation(timestamp){
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if(!start){
+                    start = timestamp
+                }
+                rotateX(angleX)
+                rotateY(angleY)
+                atoms.forEach(atom=>{
+                    atom.paint()
+                })
+                const elapsed = timestamp - start
+                if(true){
+                    requestAnimationFrame(animation)
+                }
+            }
+            requestAnimationFrame(animation)
+        </script>
+    </body>
+</html>
